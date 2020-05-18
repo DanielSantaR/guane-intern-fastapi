@@ -2,6 +2,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.encoders import jsonable_encoder
 from app.models.dog import Dog, DogRecieved, UpdateDog
 from datetime import datetime
+
+from app.db import postgres
 import requests
 
 
@@ -11,35 +13,58 @@ storage = []
 
 global_id = 0
 
-
-@router.get('/')
+@router.get('/db/')
 def get_all_dogs():
-    return storage
 
-@router.get('/{name}')
-def get_dog_by_name(*, name: str):
+    cur, con = postgres.establish_connection()
 
-    found_dogs_by_name = []
-    for i in range(len(storage)):  
-        if(storage[i]['name'] == name):
-            dog = storage[i]
-            found_dogs_by_name.append(dog)
-    
-    if not(found_dogs_by_name):
+    all_dogs = postgres.db_get_all_dogs(cur)
+    postgres.close_connection(con, cur)
+
+    if not (all_dogs):
+        message = 'No dogs found'
+        return message
+
+    return {'message': 'all the dogs', 'dogs': all_dogs} 
+
+
+@router.get('/name/{name}')
+def get_dog_by_name(name: str = Path(..., min_length=1, max_length=20)):
+
+    cur, con = postgres.establish_connection()
+    print(name)
+    dogs_by_name = postgres.db_get_dog_by_name(cur, name)
+    postgres.close_connection(con, cur)
+
+    if not(dogs_by_name):
         message = f'No dog found named {name}'
         return message
 
-    return {'message': f'Found dogs named {name}', 'data': found_dogs_by_name}
+    return {'message': f'Found dogs named {name}', 'data': dogs_by_name}
 
 
-@router.get('/is_adopted/')
+@router.get('/id/{dog_id}')
+def get_dog_by_id(dog_id: int = Path(..., ge=0)):
+
+    cur, con = postgres.establish_connection()
+
+    dog_by_id = postgres.db_get_dog_by_id(cur, dog_id)
+    postgres.close_connection(con, cur)
+
+    if not (dog_by_id):
+        message = f'No dog found with id {dog_id}'
+        return message
+
+    return {'message': f'Found dog with id {dog_id}', 'dog': dog_by_id} 
+
+
+@router.get('/db/is_adopted/')
 def get_adopted_dogs():
 
-    adopted_dogs = []
-    for i in range(len(storage)):
-        if(storage[i]['is_adopted']):
-            dog_adopted = storage[i]
-            adopted_dogs.append(dog_adopted)
+    cur, con = postgres.establish_connection()
+
+    adopted_dogs = postgres.db_get_adopted_dogs(cur)
+    postgres.close_connection(con, cur)
 
     if not(adopted_dogs):
         message = 'No adopted dog'
@@ -48,101 +73,71 @@ def get_adopted_dogs():
     return {'message': 'Adopted dogs', 'data': adopted_dogs}
 
 
-@router.post('/{name}')
+@router.post('/db/{name}')
 def insert_dog(*, name: str, dog_recived: DogRecieved):
 
-    global global_id 
-    global_id += 1
-    dog = Dog(dog_recived, name, global_id)
-    storage.extend([dog.__dict__])
+    cur, con = postgres.establish_connection()
+
+    picture = (requests.get('https://dog.ceo/api/breeds/image/random').json())['message']
+    create_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    update_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    is_adopted = dog_recived.is_adopted
+    dog_age = dog_recived.age
+    dog_weight = dog_recived.weight
+    postgres.db_insert_dog(cur, name, picture, create_date, update_date, is_adopted, dog_age, dog_weight)
+
+    postgres.db_commit(con)
+    postgres.close_connection(con, cur)
+
     message = 'Dog successfully added'
-    return {'message': message, 'dog': dog.__dict__}
+    return {'message': message}
 
 
-@router.put('/{dog_id}')
-def update_dog(
-    *, 
-    dog_id: int = Path(..., gt=0), 
-    update_dog: UpdateDog
-    ):
-
-    for i in range(len(storage)):
-        if(storage[i]['id']==dog_id):
-            storage[i]['name'] = update_dog.name
-            if(update_dog.picture):
-                storage[i]['picture'] = (requests.get('https://dog.ceo/api/breeds/image/random').json())['message']
-            storage[i]['update_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-            storage[i]['is_adopted'] = update_dog.is_adopted
-            uptade_name = storage[i]['name']
-            message = f'Dog named {uptade_name} was successfully updated'
-            return message
+@router.put('/db/{dog_id}')
+def update_dog(*, dog_id: int = Path(..., gt=0), update_dog: UpdateDog):
     
+    cur, con = postgres.establish_connection()
+
+    if (postgres.db_get_dog_by_id(cur, dog_id)):
+       
+        dog_name = update_dog.name
+        if (update_dog.picture):
+            picture = (requests.get('https://dog.ceo/api/breeds/image/random').json())['message']
+        create_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        update_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        is_adopted = update_dog.is_adopted
+        dog_age = update_dog.age
+        dog_weight = update_dog.weight
+        postgres.db_insert_dog(cur, dog_name, picture, create_date, update_date, is_adopted, dog_age, dog_weight)
+
+        postgres.db_commit(con)
+        postgres.close_connection(con, cur)
+
+        message = f'Dog with id {dog_id} and named {dog_name} was successfully updated'
+        return {'message': message}
+
+    postgres.close_connection(con, cur)
     message = f'No dog found with id {dog_id}'
     return message
 
 
-@router.delete('/{dog_id}')
+@router.delete('/db/{dog_id}')
 def delete_dog(*, dog_id: int = Path(..., gt=0)):
 
-    for i in range(len(storage)):
-        if(storage[i]['id']==dog_id):
-            delete_name = storage[i]['name']
-            storage.pop(i)
-            message = f'Dog with id {dog_id} named {delete_name} was successfully deleted'
-            return message
-    
+    cur, con = postgres.establish_connection()
+
+    found_dog = postgres.db_get_dog_by_id(cur, dog_id)
+
+    if (found_dog):
+        deleted_name = found_dog[0][1]
+        postgres.db_delete_by_id(cur, dog_id)
+
+        postgres.db_commit(con)
+        postgres.close_connection(con, cur)
+
+        message = f'Dog with id {dog_id} named {deleted_name} was successfully deleted'
+        return message
+
+    postgres.close_connection(con, cur)   
     message = f'No dog found with id {dog_id}'
-    return message
-    
-
-@router.get('/get_test_data/')
-def get_test_data():
-
-    global global_id 
-    global_id += 1
-    dog_test1 = {
-        "id": global_id,
-        "name": "Lazy",
-        "picture": "https://images.dog.ceo/breeds/papillon/n02086910_6483.jpg",
-        "create_date": "2020-02-20 20:58:55.164954",
-        "update_date": "2020-05-21 10:58:55.104954",
-        "is_adopted": True,
-        "weight": 12.5
-    }
-
-    global_id += 1
-    dog_test2 = {
-        "id": global_id,
-        "name": "Bruna",
-        "picture": "https://images.dog.ceo/breeds/hound-ibizan/n02091244_5943.jpg",
-        "create_date": "2020-05-21 10:58:55.104954",
-        "update_date": "2020-05-21 10:58:55.104954",
-        "is_adopted": True,
-        "age": 2
-    }
-
-    global_id += 1
-    dog_test3 = {
-        "id": global_id,
-        "name": "Martina",
-        "picture": "https://images.dog.ceo/breeds/hound-basset/n02088238_11136.jpg",
-        "create_date": "2020-05-21 10:58:55.104954",
-        "update_date": "2020-05-21 10:58:55.104954",
-        "is_adopted": False,
-        "age": 10,
-        "weight": 8.8
-    }
-
-    global_id += 1
-    dog_test4 = {
-        "id": global_id,
-        "name": "Lazy",
-        "picture": "https://images.dog.ceo/breeds/terrier-westhighland/n02098286_4364.jpg",
-        "create_date": "2020-05-21 10:58:55.104954",
-        "update_date": "2020-05-21 10:58:55.104954",
-        "is_adopted": False
-    }
-
-    storage.extend([dog_test1, dog_test2, dog_test3, dog_test4])
-    message = 'successfully generated test data'
     return message

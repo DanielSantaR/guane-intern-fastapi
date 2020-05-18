@@ -13,6 +13,8 @@ class UpdateDog(BaseModel):
     name: Optional[str]
     picture: Optional[bool]
     is_adopted: Optional[bool]
+    age: Optional[int]
+    weight: Optional[float]
 
 class Dog():
     def __init__(self, dog_received, name, id):
