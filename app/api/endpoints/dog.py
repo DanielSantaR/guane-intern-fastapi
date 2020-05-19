@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
+""" from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.encoders import jsonable_encoder
 from app.models.dog import Dog, DogRecieved, UpdateDog
 from datetime import datetime
@@ -101,7 +101,7 @@ def update_dog(*, dog_id: int = Path(..., gt=0), update_dog: UpdateDog):
 
         if (update_dog.picture):
             picture = (requests.get('https://dog.ceo/api/breeds/image/random').json())['message']
-            
+
         update_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         is_adopted = update_dog.is_adopted
         dog_age = update_dog.age
@@ -149,3 +149,4 @@ def delete_dog(*, dog_id: int = Path(..., gt=0)):
     postgres.close_connection(con, cur)   
     message = f'No dog found with id {dog_id}'
     return message
+ """
