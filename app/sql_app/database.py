@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from app.core import config
 
-SQLALCHEMY_DATABASE_URL = "postgresql://daniel:root@localhost/db_guane_intern_fastapi"
+SQLALCHEMY_DATABASE_URL = f"postgresql://{config.USER}:{config.PASSWORD}@{config.HOST}/{config.DATABASE}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

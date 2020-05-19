@@ -19,9 +19,9 @@ def get_db():
         db.close()
 
 
-# @router.post("/{name}", response_model=schemas.Dog)
-# def inset_dog(name: str, dog: schemas.DogRecieved, db: Session = Depends(get_db)):
-#     return crud.insert_dog(db=db, dog=dog, dog_id=3, dog_name=name)
+@router.post("/{name}", response_model=schemas.Dog)
+def inset_dog(name: str, dog: schemas.DogRecieved, db: Session = Depends(get_db)):
+    return crud.insert_dog(db=db, dog=dog, dog_name=name)
 
 
 @router.get("/", response_model=List[schemas.Dog])
