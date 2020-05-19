@@ -9,9 +9,6 @@ import requests
 
 router = APIRouter()
 
-storage = []
-
-global_id = 0
 
 @router.get('/db/')
 def get_all_dogs():
@@ -101,14 +98,25 @@ def update_dog(*, dog_id: int = Path(..., gt=0), update_dog: UpdateDog):
     if (postgres.db_get_dog_by_id(cur, dog_id)):
        
         dog_name = update_dog.name
+
         if (update_dog.picture):
             picture = (requests.get('https://dog.ceo/api/breeds/image/random').json())['message']
-        create_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            
         update_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         is_adopted = update_dog.is_adopted
         dog_age = update_dog.age
         dog_weight = update_dog.weight
-        postgres.db_insert_dog(cur, dog_name, picture, create_date, update_date, is_adopted, dog_age, dog_weight)
+
+        postgres.db_update_dog(
+                                cur, 
+                                dog_name, 
+                                picture, 
+                                update_date, 
+                                is_adopted, 
+                                dog_age, 
+                                dog_weight,
+                                dog_id
+                                )
 
         postgres.db_commit(con)
         postgres.close_connection(con, cur)

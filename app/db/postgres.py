@@ -51,13 +51,13 @@ def db_insert_dog(cur, name, picture, create_day, update_day, is_adopted, age, w
                 (name, picture, create_day, update_day, is_adopted, age, weigth))
     return 0
 
-def db_update_dog(cur, name, picture, create_day, update_day, is_adopted, age, weigth, dog_id):
+def db_update_dog(cur, name, picture, update_day, is_adopted, age, weigth, dog_id):
     cur.execute('UPDATE dogs \
                 SET name = %s, picture = %s, \
-                create_day = %s, update_day = %s, \
-                is_adopted = %s, age = %s, weigth = %s \
+                update_day = %s, is_adopted = %s, \
+                age = %s, weigth = %s \
                 WHERE id = %s', 
-                (name, picture, create_day, update_day, 
+                (name, picture, update_day, 
                 is_adopted, age, weigth, dog_id)
                 )
     return 0

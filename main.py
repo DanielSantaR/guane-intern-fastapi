@@ -26,7 +26,7 @@ if config.BACKEND_CORS_ORIGINS:
     )
 
     
-app.include_router(api_router, prefix=config.API_V1_STR)
+app.include_router(api_router, prefix=config.API_STR)
 
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):
