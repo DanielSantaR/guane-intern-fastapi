@@ -10,7 +10,7 @@ models.Base.metadata.create_all(bind=engine)
 
 router = APIRouter()
 
-# Dependency
+
 def get_db():
     db = SessionLocal()
     try:
@@ -19,43 +19,56 @@ def get_db():
         db.close()
 
 
-@router.post("/{name}", response_model=schemas.Dog)
-def inset_dog(name: str, dog: schemas.DogRecieved, db: Session = Depends(get_db)):
-    return crud.insert_dog(db=db, dog=dog, dog_name=name)
-
-
 @router.get("/", response_model=List[schemas.Dog])
 def get_all_dogs(db: Session = Depends(get_db)):
     return crud.get_all_dogs(db)
 
-@router.get("/{name}", response_model=List[schemas.Dog])
+
+@router.get("/name/{name}", response_model=List[schemas.Dog])
 def get_dog_by_name(name: str, db: Session = Depends(get_db)):
-    return crud.get_dog_by_name(db, name)
+    db_dog_name = crud.get_dog_by_name(db, name)
+    if not db_dog_name:
+        raise HTTPException(
+            status_code=404, detail=f"Dog named {name} not found"
+        )
+    return db_dog_name
 
 
-
-""" @router.get("/users/", response_model=List[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
-
-
-@router.get("/users/{user_id}", response_model=schemas.User)
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = crud.get_user(db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
+@router.get("/id/{dog_id}", response_model=schemas.Dog)
+def get_dog_by_id(dog_id: int, db: Session = Depends(get_db)):
+    db_dog_id = crud.get_dog_by_id(db, dog_id)
+    if db_dog_id is None:
+        raise HTTPException(
+            status_code=404, detail=f"Dog with id {dog_id} not found"
+        )
+    return db_dog_id
 
 
-@router.post("/users/{user_id}/items/", response_model=schemas.Item)
-def create_item_for_user(
-    user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
-):
-    return crud.create_user_item(db=db, item=item, user_id=user_id)
+@router.get("/is_adopted/", response_model=List[schemas.Dog])
+def get_adopted_dogs(db: Session = Depends(get_db)):
+    return crud.get_adopted_dogs(db)
 
 
-@router.get("/items/", response_model=List[schemas.Item])
-def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    items = crud.get_items(db, skip=skip, limit=limit)
-    return items """
+@router.post("/test_data/")
+def generate_test_data(db: Session = Depends(get_db)):
+    return crud.test_data(db=db)
+
+
+@router.post("/insert/{name}", response_model=schemas.Dog)
+def inset_dog(name: str, dog: schemas.DogRecieved, db: Session = Depends(get_db)):
+    return crud.insert_dog(db=db, dog=dog, dog_name=name)
+
+
+@router.put("/update/{dog_id}")
+def update_dog(dog_id: int, dog: schemas.UpdateDog, db: Session = Depends(get_db)):
+    db_dog_id = crud.update_dog(db, dog, dog_id)
+    if db_dog_id is None:
+        raise HTTPException(
+            status_code=404, detail=f"Dog with id {dog_id} not found"
+        )
+    return db_dog_id
+
+
+@router.delete("/{dog_id}")
+def delete_dog(dog_id: int, db: Session = Depends(get_db)):
+    return crud.delete_dog(db, dog_id)
