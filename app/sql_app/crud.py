@@ -6,8 +6,7 @@ import requests
 
 
 def get_all_dogs(db: Session):
-    dogs = db.query(models.Dog).all()
-    return dogs
+    return db.query(models.Dog).all()
 
 
 def get_dog_by_id(db: Session, dog_id: int):
@@ -39,10 +38,20 @@ def insert_dog(db: Session, dog: schemas.DogRecieved, dog_name: str):
 def delete_dog(db: Session, dog_id: int):
     dog_deleted = db.query(models.Dog).filter(models.Dog.id == dog_id).delete()
     if (dog_deleted != 0):
+        db.execute('ALTER SEQUENCE dogs_id_seq RESTART;')
+        db.execute("UPDATE dogs SET id = DEFAULT;")
         db.commit()
         message = f'Dog with id {dog_id} was successfully deleted'
         return {'message': message}
     message = f'Dog with id {dog_id} not found'
+    return {'message': message}
+
+
+def delete_all_dogs(db: Session):
+    db.query(models.Dog).delete()
+    db.execute('ALTER SEQUENCE dogs_id_seq RESTART;')
+    db.commit()
+    message = 'All dogs deleted successfully'
     return {'message': message}
 
 

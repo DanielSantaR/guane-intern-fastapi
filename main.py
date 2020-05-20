@@ -11,7 +11,7 @@ app = FastAPI(title=config.PROJECT_NAME,
 
 # CORS
 origins = []
-        
+
 if config.BACKEND_CORS_ORIGINS:
     origins_raw = config.BACKEND_CORS_ORIGINS.split(",")
     for origin in origins_raw:
@@ -25,8 +25,9 @@ if config.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-    
+
 app.include_router(api_router, prefix=config.API_STR)
+
 
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):

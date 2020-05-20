@@ -10,11 +10,8 @@ class Dog(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     picture = Column(String)
-    #create_date = Column(DateTime, default=datetime.datetime.utcnow)
-    #update_date = Column(DateTime, default=datetime.datetime.utcnow)\
     create_date = Column(DateTime)
     update_date = Column(DateTime)
     is_adopted = Column(Boolean)
     age = Column(Integer)
     weight = Column(Integer)
-
